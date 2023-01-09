@@ -1,0 +1,26 @@
+#
+#  Created by Lukas Stahlbock in 2022
+#  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+#
+FROM arm64v8/ubuntu:20.04 AS BUILDSTAGE
+
+RUN DEBIAN_FRONTEND="noninteractive" apt update && \
+    DEBIAN_FRONTEND="noninteractive" apt install -y git \
+                            libboost-all-dev \
+                            cmake \
+                            g++ \
+                            make \
+                            patch \
+                            wget; exit 0
+RUN wget -P /usr/bin/ https://github.com/multiarch/qemu-user-static/releases/download/v7.1.0-2/qemu-aarch64-static 
+WORKDIR /usr/src/app
+RUN git clone --branch 3.1.16.1  https://github.com/GENIVI/vsomeip
+COPY patches/* /usr/src/app/
+RUN cd vsomeip && \
+    patch -p1 < ../timestamp-log.patch && \
+    patch -p1 < ../configuration.patch && \
+    patch -p1 < ../configuration-header.patch
+
+WORKDIR /usr/src/app/vsomeip/build
+RUN cmake -DVSOMEIP_INSTALL_ROUTINGMANAGERD=ON -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_SIGNAL_HANDLING=1 .. && make -j4 && make install
+RUN ldconfig

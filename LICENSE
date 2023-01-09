@@ -1,0 +1,25 @@
+Copyright (c) IAV GmbH Ingenieurgesellschaft Auto und Verkehr, 2022. All rights reserved. (Lukas Stahlbock)
+
+Different components of Container-Startup-Time-Reduction are under different licenses (a mix
+of MIT, GPL-2-only, Apache-2.0 and MPL-2.0). See LICENSE.MIT, LICENSE.GPL-2.0-only, LICENSE.Apache-2.0, LICENSE.MPL-2.0 and BSD-3-Clause for further 
+details of the individual licenses.
+
+All metadata is MIT licensed unless otherwise stated. Source code
+included in tree for individual recipes (e.g. patches) are under 
+the LICENSE stated in the associated recipe (.bb file) unless 
+otherwise stated.
+
+License information for any other files is either explicitly stated 
+or defaults to MIT.
+
+Individual files may contain the following style tags instead of the full license 
+text to identify their license:
+
+    SPDX-License-Identifier: MIT
+    SPDX-License-Identifier: GPL-2.0-only
+    SPDX-License-Identifier: Apache-2.0
+    SPDX-License-Identifier: MPL-2.0
+    SPDX-License-Identifier: BSD-3-Clause
+
+This enables machine processing of license information based on the SPDX
+License Identifiers that are here available: http://spdx.org/licenses/

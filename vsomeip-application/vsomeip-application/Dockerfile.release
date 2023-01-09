@@ -1,0 +1,29 @@
+#
+#  Created by Lukas Stahlbock in 2022
+#  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+#
+ARG IMAGE_BUILD
+ARG IMAGE_RELEASE
+ARG APP_NAME
+
+FROM --platform=arm64 ${IMAGE_BUILD} AS BUILDSTAGE
+WORKDIR /usr/src/app
+
+COPY ${APP_NAME}/* /usr/src/app/
+RUN mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. && make && make install
+
+FROM scratch AS INTERMEDIATE
+COPY --from=BUILDSTAGE /usr/local/bin/vsomeip-generic /usr/local/bin/vsomeip-generic
+#COPY conf/* /usr/local/etc/vsomeip/
+
+FROM --platform=arm64 ${IMAGE_RELEASE}
+COPY --from=INTERMEDIATE /usr/local/ /usr/local/
+
+WORKDIR /usr/local/bin
+# default environment variables
+ENV VSOMEIP_CONFIGURATION=/usr/local/etc/vsomeip/vsomeip-default.json
+ENV VSOMEIP_LOGGING_PATH=/tmp/logs/vsomeip-client-00.log
+ENV VSOMEIP_APPLICATION_NAME=client-00
+ENV VSOMEIP_APPLICATION_ID=0x1000
+ENV LD_LIBRARY_PATH=/lib/aarch64-linux-gnu/:/usr/lib/aarch64-linux-gnu/:/usr/local/lib/:/lib/:/usr/lib/
+ENTRYPOINT [ "./vsomeip-generic" ]

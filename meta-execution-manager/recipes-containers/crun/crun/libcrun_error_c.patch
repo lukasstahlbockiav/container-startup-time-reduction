@@ -1,0 +1,46 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**/
+diff --git a/src/libcrun/error.c b/src/libcrun/error.c
+index ae3aaea..3003012 100644
+--- a/src/libcrun/error.c
++++ b/src/libcrun/error.c
+@@ -156,13 +156,22 @@ typedef char timestamp_t[64];
+ static void
+ get_timestamp (timestamp_t *timestamp, const char *suffix)
+ {
++  /*
+   struct timeval tv;
+   struct tm now;
+ 
+   gettimeofday (&tv, NULL);
+   gmtime_r (&tv.tv_sec, &now);
+   strftime ((char *) timestamp, 64, "%Y-%m-%dT%H:%M:%S", &now);
+-  sprintf (((char *) timestamp) + 19, ".%09ldZ%.8s", tv.tv_usec, suffix);
++  sprintf (((char *) timestamp) + 19, ".%06ldZ%.8s", tv.tv_usec, suffix);
++  */
++  struct timespec tp;
++  struct tm now;
++  clock_gettime(CLOCK_REALTIME, &tp);
++  gmtime_r (&tp.tv_sec, &now);
++  strftime ((char *) timestamp, 64, "%Y-%m-%dT%H:%M:%S", &now);
++  sprintf (((char *) timestamp) + 19, ".%09ldZ%.8s", tp.tv_nsec, suffix);
++  
+ }
+ 
+ static void *
+@@ -260,7 +269,12 @@ log_write_to_stream (int errno_, const char *msg, bool warning, void *arg)
+       if (log_format == LOG_FORMAT_TEXT)
+         get_timestamp (&timestamp, ": ");
+     }
+-
++  else
++    {
++      if (log_format == LOG_FORMAT_TEXT)
++        get_timestamp (&timestamp, ": ");
++    }
++  
+   if (errno_)
+     fprintf (stream, "%s%s%s: %s%s\n", color_begin, timestamp, msg, strerror (errno_), color_end);
+   else

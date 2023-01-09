@@ -1,0 +1,313 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**
+**  SPDX-License-Identifier: MPL-2.0
+**  source repository: https://github.com/COVESA/vsomeip
+**/
+diff --git a/implementation/configuration/src/configuration_impl.cpp b/implementation/configuration/src/configuration_impl.cpp
+index 9f7aeab..0f69d0b 100644
+--- a/implementation/configuration/src/configuration_impl.cpp
++++ b/implementation/configuration/src/configuration_impl.cpp
+@@ -10,6 +10,7 @@
+ #include <sstream>
+ #include <limits>
+ #include <utility>
++#include <iostream>
+ 
+ #define WIN32_LEAN_AND_MEAN
+ 
+@@ -200,109 +201,181 @@ bool configuration_impl::load(const std::string &_name) {
+     if (is_loaded_)
+         return true;
+ 
+-    // Predefine file / folder
+-    std::string its_file(VSOMEIP_DEFAULT_CONFIGURATION_FILE); // configuration file
+-    std::string its_folder(VSOMEIP_DEFAULT_CONFIGURATION_FOLDER); // configuration folder
++    std::string env_conf = getenv(VSOMEIP_ENV_CONFIGURATION);
++    if (env_conf == "/usr/local/etc/vsomeip/vsomeip-default.json"){
++        // Dummy initialization; maybe we'll find no logging configuration
++        logger::logger_impl::init(shared_from_this());
++        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+ 
+-    // Override with local file / folder (if existing)
+-    std::string its_local_file(VSOMEIP_LOCAL_CONFIGURATION_FILE);
+-    if (utility::is_file(its_local_file)) {
+-        its_file = its_local_file;
+-    }
++        set_predefined_attributes();
+ 
+-    std::string its_local_folder(VSOMEIP_LOCAL_CONFIGURATION_FOLDER);
+-    if (utility::is_folder(its_local_folder)) {
+-        its_folder = its_local_folder;
+-    }
++        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
++        VSOMEIP_INFO << "Parsed vsomeip configuration in "
++                << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
++                << "ms";
++    } else {
++        // Predefine file / folder
++        std::string its_file(VSOMEIP_DEFAULT_CONFIGURATION_FILE); // configuration file
++        std::string its_folder(VSOMEIP_DEFAULT_CONFIGURATION_FOLDER); // configuration folder
+ 
+-    // Override with path from environment (if existing)
+-    const char *its_env = getenv(VSOMEIP_ENV_CONFIGURATION);
+-    if (nullptr != its_env) {
+-        if (utility::is_file(its_env)) {
+-            its_file = its_env;
+-            its_folder = "";
+-        } else if (utility::is_folder(its_env)) {
+-            its_folder = its_env;
+-            its_file = "";
++        // Override with local file / folder (if existing)
++        std::string its_local_file(VSOMEIP_LOCAL_CONFIGURATION_FILE);
++        if (utility::is_file(its_local_file)) {
++            its_file = its_local_file;
+         }
+-    }
+ 
+-    std::set<std::string> its_input;
+-    if (its_file != "") {
+-        its_input.insert(its_file);
+-    }
+-    if (its_folder != "") {
+-        its_input.insert(its_folder);
+-#ifndef _WIN32
+-        // load security configuration files from UID_GID sub folder if existing
+-        std::stringstream its_security_config_folder;
+-        its_security_config_folder << its_folder << "/" << getuid() << "_" << getgid();
+-        if (utility::is_folder(its_security_config_folder.str())) {
+-            its_input.insert(its_security_config_folder.str());
++        std::string its_local_folder(VSOMEIP_LOCAL_CONFIGURATION_FOLDER);
++        if (utility::is_folder(its_local_folder)) {
++            its_folder = its_local_folder;
+         }
++
++        // Override with path from environment (if existing)
++        const char *its_env = getenv(VSOMEIP_ENV_CONFIGURATION);
++        if (nullptr != its_env) {
++            if (utility::is_file(its_env)) {
++                its_file = its_env;
++                its_folder = "";
++            } else if (utility::is_folder(its_env)) {
++                its_folder = its_env;
++                its_file = "";
++            }
++        }
++
++        std::set<std::string> its_input;
++        if (its_file != "") {
++            its_input.insert(its_file);
++        }
++        if (its_folder != "") {
++            its_input.insert(its_folder);
++#ifndef _WIN32
++            // load security configuration files from UID_GID sub folder if existing
++            std::stringstream its_security_config_folder;
++            its_security_config_folder << its_folder << "/" << getuid() << "_" << getgid();
++            if (utility::is_folder(its_security_config_folder.str())) {
++                its_input.insert(its_security_config_folder.str());
++            }
+ #endif
+-    }
++        }
+ 
+-    // Determine standard configuration file
+-    its_env = getenv(VSOMEIP_ENV_MANDATORY_CONFIGURATION_FILES);
+-    if (nullptr != its_env) {
+-        std::string its_temp(its_env);
+-        set_mandatory(its_temp);
+-    } else {
+-        set_mandatory(VSOMEIP_MANDATORY_CONFIGURATION_FILES);
+-    }
++        // Determine standard configuration file
++        its_env = getenv(VSOMEIP_ENV_MANDATORY_CONFIGURATION_FILES);
++        if (nullptr != its_env) {
++            std::string its_temp(its_env);
++            set_mandatory(its_temp);
++        } else {
++            set_mandatory(VSOMEIP_MANDATORY_CONFIGURATION_FILES);
++        }
+ 
+-    // Start reading
+-    std::set<std::string> its_failed;
++        // Start reading
++        std::set<std::string> its_failed;
+ 
+-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+-    std::vector<configuration_element> its_mandatory_elements;
+-    std::vector<configuration_element> its_optional_elements;
++        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
++        std::vector<configuration_element> its_mandatory_elements;
++        std::vector<configuration_element> its_optional_elements;
+ 
+-    // Dummy initialization; maybe we'll find no logging configuration
+-    logger::logger_impl::init(shared_from_this());
++        // Dummy initialization; maybe we'll find no logging configuration
++        logger::logger_impl::init(shared_from_this());
+ 
+-    // Look for the standard configuration file
+-    read_data(its_input, its_mandatory_elements, its_failed, true);
+-    load_data(its_mandatory_elements, true, false);
++        // Look for the standard configuration file
++        read_data(its_input, its_mandatory_elements, its_failed, true);
++        load_data(its_mandatory_elements, true, false);
+ 
+-    // If the configuration is incomplete, this is the routing manager configuration or
+-    // the routing is yet unknown, read the full set of configuration files
+-    if (its_mandatory_elements.empty() ||
+-            _name == get_routing_host() ||
+-            "" == get_routing_host()) {
+-        read_data(its_input, its_optional_elements, its_failed, false);
+-        load_data(its_mandatory_elements, false, true);
+-        load_data(its_optional_elements, true, true);
+-    }
++        // If the configuration is incomplete, this is the routing manager configuration or
++        // the routing is yet unknown, read the full set of configuration files
++        if (its_mandatory_elements.empty() ||
++                _name == get_routing_host() ||
++                "" == get_routing_host()) {
++            read_data(its_input, its_optional_elements, its_failed, false);
++            load_data(its_mandatory_elements, false, true);
++            load_data(its_optional_elements, true, true);
++        }
+ 
+-    // Tell, if reading of configuration file(s) failed.
+-    // (This may file if the logger configuration is incomplete/missing).
+-    for (auto f : its_failed)
+-        VSOMEIP_WARNING << "Reading of configuration file \""
+-            << f << "\" failed. Configuration may be incomplete.";
++        // Tell, if reading of configuration file(s) failed.
++        // (This may file if the logger configuration is incomplete/missing).
++        for (auto f : its_failed)
++            VSOMEIP_WARNING << "Reading of configuration file \""
++                << f << "\" failed. Configuration may be incomplete.";
+ 
+-    // set global unicast address for all services with magic cookies enabled
+-    set_magic_cookies_unicast_address();
++        // set global unicast address for all services with magic cookies enabled
++        set_magic_cookies_unicast_address();
+ 
+-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+-    VSOMEIP_INFO << "Parsed vsomeip configuration in "
+-            << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+-            << "ms";
++        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
++        VSOMEIP_INFO << "Parsed vsomeip configuration in "
++                << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
++                << "ms";
+ 
+-    for (auto i : its_input) {
+-        if (utility::is_file(i))
+-            VSOMEIP_INFO << "Using configuration file: \"" << i << "\".";
++        for (auto i : its_input) {
++            if (utility::is_file(i))
++                VSOMEIP_INFO << "Using configuration file: \"" << i << "\".";
+ 
+-        if (utility::is_folder(i))
+-            VSOMEIP_INFO << "Using configuration folder: \"" << i << "\".";
++            if (utility::is_folder(i))
++                VSOMEIP_INFO << "Using configuration folder: \"" << i << "\".";
++        }
+     }
+-
+     is_loaded_ = true;
+ 
+     return is_loaded_;
+ }
+ 
++void configuration_impl::set_predefined_attributes(){
++    has_console_log_ = false;
++    is_configured_[ET_LOGGING_CONSOLE] = true;
++    has_file_log_ = true;
++    logfile_ = getenv("VSOMEIP_LOGGING_PATH");
++    is_configured_[ET_LOGGING_FILE] = true;
++    has_dlt_log_ = false;
++    is_configured_[ET_LOGGING_DLT] = true;
++    loglevel_ = vsomeip_v3::logger::level_e::LL_INFO;
++    is_configured_[ET_LOGGING_LEVEL] = true;
++    log_version_ = false;
++
++    routing_host_ = "routingmanagerd";
++    is_configured_[ET_ROUTING] = true;
++
++    std::size_t its_max_dispatchers(VSOMEIP_MAX_DISPATCHERS);
++    std::size_t its_max_dispatch_time(VSOMEIP_MAX_DISPATCH_TIME);
++    std::size_t its_io_thread_count(VSOMEIP_IO_THREAD_COUNT);
++    std::size_t its_request_debounce_time(1);
++    std::map<plugin_type_e, std::set<std::string>> plugins;
++    int its_io_thread_nice_level(VSOMEIP_IO_THREAD_NICE_LEVEL);
++    std::string its_overlay;
++
++    std::string env_app_name_ = getenv("VSOMEIP_APPLICATION_NAME");
++    std::string env_app_id_ = getenv("VSOMEIP_APPLICATION_ID");
++    client_t its_id(VSOMEIP_CLIENT_UNSET);
++    std::stringstream its_converter;
++    if (env_app_id_.size() > 1 && env_app_id_[0] == '0' && env_app_id_[1] == 'x') {
++                its_converter << std::hex << env_app_id_;
++            } else {
++                its_converter << std::dec << env_app_id_;
++            }
++            its_converter >> its_id;
++    applications_[env_app_name_] = std::make_tuple(its_id, its_max_dispatchers,
++                                                its_max_dispatch_time, its_io_thread_count,
++                                                its_request_debounce_time, plugins, its_io_thread_nice_level,
++                                                its_overlay);
++
++    network_ = "vsomeip";
++    is_configured_[ET_NETWORK] = true;
++    diagnosis_mask_ = 0xFF00;
++    is_configured_[ET_DIAGNOSIS_MASK] = true;
++    shutdown_timeout_ = 5000;
++    is_configured_[ET_SHUTDOWN_TIMEOUT] = true;
++    max_local_message_size_ = 65535;
++    max_reliable_message_size_ = 65535;
++    max_unreliable_message_size_ = 65535;
++    endpoint_queue_limit_external_ = QUEUE_SIZE_UNLIMITED;
++    is_configured_[ET_ENDPOINT_QUEUE_LIMIT_EXTERNAL] = true;
++    tcp_restart_aborts_max_ = VSOMEIP_MAX_TCP_RESTART_ABORTS;
++    is_configured_[ET_TCP_RESTART_ABORTS_MAX] = true;
++    udp_receive_buffer_size_ = 65535;
++    is_configured_[ET_UDP_RECEIVE_BUFFER_SIZE] = true;
++    /*
++    for (auto i = 0; i < ET_MAX; i++)
++        is_configured_[i] = true;
++    */
++}
++
+ bool
+ configuration_impl::check_routing_credentials(
+         client_t _client, uint32_t _uid, uint32_t _gid) const {
+@@ -409,7 +482,31 @@ void configuration_impl::read_data(const std::set<std::string> &_input,
+         std::vector<configuration_element> &_elements, std::set<std::string> &_failed,
+         bool _mandatory_only) {
+     for (auto i : _input) {
+-        if (utility::is_file(i)) {
++        std::cout << i << std::endl;
++        if (i == "/usr/local/etc/vsomeip/vsomeip-default.json"){
++            std::cout << "Config: " << getenv(VSOMEIP_ENV_CONFIGURATION) << std::endl;
++            std::cout << "App-Id: " << getenv("VSOMEIP_APPLICATION_ID") << std::endl;
++            std::cout << "Log path: " << getenv("VSOMEIP_LOGGING_PATH") << std::endl;
++            boost::property_tree::ptree its_tree, children_logging, child_logging_file, child_logging_version, children_application, child_application;
++            child_logging_file.put("enable", "true");
++            child_logging_file.put("path", getenv("VSOMEIP_LOGGING_PATH"));
++            child_logging_version.put("enable","false");
++            children_logging.put("level", "info");
++            children_logging.put("console", "false");
++            children_logging.add_child("file", child_logging_file);
++            children_logging.put("dlt", "false");
++            children_logging.add_child("version", child_logging_version);
++
++            child_application.put("name", getenv(VSOMEIP_ENV_APPLICATION_NAME));
++            child_application.put("id", getenv("VSOMEIP_APPLICATION_ID"));
++            children_application.push_back(std::make_pair("", child_application));
++            
++            its_tree.add_child("logging", children_logging);
++            its_tree.add_child("applications", children_application);
++            its_tree.put("routing", "routingmanagerd");
++
++            _elements.push_back({ i, its_tree });
++        } else if (utility::is_file(i)) {
+             if (is_mandatory(i) == _mandatory_only) {
+                 boost::property_tree::ptree its_tree;
+                 try {

@@ -1,0 +1,29 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**/
+diff --git a/src/batch.h b/src/batch.h
+new file mode 100644
+index 0000000..3d17dcb
+--- /dev/null
++++ b/src/batch.h
+@@ -0,0 +1,18 @@
++#ifndef BATCH_H
++#define BATCH_H
++
++#include "crun.h"
++
++#define MAX_APPLICATIONS 50
++
++struct crun_batch_global_arguments {
++    bool debug;
++    char *log;
++    char *log_format;
++    char *config;
++    bool native;
++};
++
++int crun_command_batch (struct crun_global_arguments *global_args, int argc, char **argv, libcrun_error_t *error);
++
++#endif
+\ No newline at end of file

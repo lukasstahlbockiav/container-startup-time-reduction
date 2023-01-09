@@ -1,0 +1,19 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**
+**  SPDX-License-Identifier: MPL-2.0
+**  source repository: https://github.com/COVESA/vsomeip
+**/
+diff --git a/implementation/configuration/include/configuration_impl.hpp b/implementation/configuration/include/configuration_impl.hpp
+index 5b77c18..ba48067 100644
+--- a/implementation/configuration/include/configuration_impl.hpp
++++ b/implementation/configuration/include/configuration_impl.hpp
+@@ -371,6 +371,7 @@ private:
+ 
+     void load_secure_services(const configuration_element &_element);
+     void load_secure_service(const boost::property_tree::ptree &_tree);
++    void set_predefined_attributes();
+ 
+ private:
+     std::mutex mutex_;

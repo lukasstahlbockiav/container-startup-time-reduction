@@ -1,0 +1,211 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**/
+diff --git a/src/batch/batch_command.c b/src/batch/batch_command.c
+new file mode 100644
+index 0000000..aaf4508
+--- /dev/null
++++ b/src/batch/batch_command.c
+@@ -0,0 +1,200 @@
++#include <string.h>
++#include <sys/types.h>
++#include <sys/wait.h>
++#include <sys/mount.h>
++#include "configuration.h"
++
++#include "../crun.h"
++#include "../libcrun/utils.h"
++
++/* copied from crun.c */
++/* Commands.  */
++#include "../run.h"
++#include "../delete.h"
++#include "../kill.h"
++#include "../list.h"
++#include "../start.h"
++#include "../create.h"
++#include "../exec.h"
++#include "../state.h"
++#include "../update.h"
++#include "../spec.h"
++#include "../pause.h"
++#include "../unpause.h"
++#include "../ps.h"
++#include "../checkpoint.h"
++#include "../restore.h"
++
++struct commands_s_b
++{
++  int value;
++  const char *name;
++  int (*handler) (struct crun_global_arguments *, int, char **, libcrun_error_t *);
++};
++
++enum
++{
++  COMMAND_CREATE = 1000,
++  COMMAND_DELETE,
++  COMMAND_EXEC,
++  COMMAND_LIST,
++  COMMAND_KILL,
++  COMMAND_RUN,
++  COMMAND_SPEC,
++  COMMAND_START,
++  COMMAND_STATE,
++  COMMAND_UPDATE,
++  COMMAND_PAUSE,
++  COMMAND_UNPAUSE,
++  COMMAND_PS,
++  COMMAND_CHECKPOINT,
++  COMMAND_RESTORE
++};
++
++struct commands_s_b commands_b[] = { { COMMAND_CREATE, "create", crun_command_create },
++                                 { COMMAND_DELETE, "delete", crun_command_delete },
++                                 { COMMAND_EXEC, "exec", crun_command_exec },
++                                 { COMMAND_LIST, "list", crun_command_list },
++                                 { COMMAND_KILL, "kill", crun_command_kill },
++                                 { COMMAND_PS, "ps", crun_command_ps },
++                                 { COMMAND_RUN, "run", crun_command_run },
++                                 { COMMAND_SPEC, "spec", crun_command_spec },
++                                 { COMMAND_START, "start", crun_command_start },
++                                 { COMMAND_STATE, "state", crun_command_state },
++                                 { COMMAND_UPDATE, "update", crun_command_update },
++                                 { COMMAND_PAUSE, "pause", crun_command_pause },
++                                 { COMMAND_UNPAUSE, "resume", crun_command_unpause },
++#ifdef HAVE_CRIU
++                                 { COMMAND_CHECKPOINT, "checkpoint", crun_command_checkpoint },
++                                 { COMMAND_RESTORE, "restore", crun_command_restore },
++#endif
++                                 {
++                                     0,
++                                 } };
++
++static struct commands_s_b *
++get_command (const char *arg)
++{
++  struct commands_s_b *it;
++  for (it = commands_b; it->value; it++)
++    if (strcmp (it->name, arg) == 0)
++      return it;
++  return NULL;
++}
++/* end of copied from crun.c */
++
++void command_container(int n_proc, struct config_containers_s* (*p)[], struct crun_global_arguments* arguments) 
++{
++  int ret;
++        
++  libcrun_warning("%s container %s", (*p)[n_proc]->command, (*p)[n_proc]->name);
++  if (strcmp((*p)[n_proc]->command, "mount") == 0){
++      ret = mount(NULL, (*p)[n_proc]->mount_target, "overlay", 0, (*p)[n_proc]->mount_options);
++      //libcrun_warning("%s container %s finished", (*p)[n_proc]->command, (*p)[n_proc]->name);
++
++  } else if (strcmp((*p)[n_proc]->command, "umount") == 0) {
++      ret = umount((*p)[n_proc]->mount_target);
++
++  } else {
++      //char* args[] = { (*p)[n_proc]->command, (*p)[n_proc]->name, (*p)[n_proc]->command_options, NULL};
++      libcrun_error_t err = NULL;
++      struct commands_s_b *command;
++      int argc;
++      char* args[9];
++      /*char log[50];
++      strcpy(log,"--log=file:/tmp/logs/crun_");
++      strcat(log,(*p)[n_proc]->name);
++      strcat(log, ".log");
++      args[0] = "crun";
++      args[1] = "--debug";
++      args[2] = log;
++      args[3] = (*p)[n_proc]->command;*/
++
++      command = get_command((*p)[n_proc]->command);
++
++      if (strcmp(command->name, "create") == 0){
++        args[0] = "create";
++        args[1] = "-b";
++        args[2] = (*p)[n_proc]->bundle;
++        args[3] = (*p)[n_proc]->name;
++        argc = 4;
++
++      } else if (strcmp(command->name, "start") == 0){
++        args[0] = "start";
++        args[1] = (*p)[n_proc]->name;
++        argc = 2;
++
++      } else if (strcmp(command->name, "run") == 0){
++        args[0] = "run";
++        args[1] = "-b";
++        args[2] = (*p)[n_proc]->bundle;
++        args[3] = "-d";
++        args[4] = (*p)[n_proc]->name;
++        argc = 5;
++
++        libcrun_warning("mount container %s", (*p)[n_proc]->name);
++        ret = mount(NULL, (*p)[n_proc]->mount_target, "overlay", 0, (*p)[n_proc]->mount_options);
++        libcrun_warning("mount container %s finished", (*p)[n_proc]->name);
++
++      } else if (strcmp(command->name, "kill") == 0){
++        args[0] = "kill";
++        args[1] = (*p)[n_proc]->name;
++        args[2] = "SIGTERM";
++        argc = 3;
++
++      } else if (strcmp(command->name, "delete") == 0){
++        args[0] = "delete";
++        args[1] = (*p)[n_proc]->name;
++        argc = 2;
++
++      }
++
++      //ret = execvp("/usr/bin/crun", args);
++      ret = command->handler(arguments, argc, args, &err);
++  }
++
++  if (UNLIKELY (ret))
++    libcrun_fail_with_error(0, "could not execute command %s", (*p)[n_proc]->command);
++  
++  libcrun_warning("%s container %s finished", (*p)[n_proc]->command, (*p)[n_proc]->name);
++}
++
++void command_native(int n_proc, struct config_containers_s* (*p)[])
++{
++  int ret;
++  char** cmd_env_ptr;
++  parse_environment_config((*p)[n_proc]->config, &cmd_env_ptr);
++  libcrun_warning("run application %s", (*p)[n_proc]->name);
++    ret = execle((*p)[n_proc]->command, "vsomeip-generic", (char*) NULL, cmd_env_ptr);
++
++  if (UNLIKELY (ret))
++    libcrun_fail_with_error(0, "could not execute command %s", (*p)[n_proc]->command);
++}
++
++/* fork the process recursively */
++void fork_rec(pid_t *pids, int n_proc, struct config_containers_s* (*p)[], bool is_native, struct crun_global_arguments* arguments)
++{
++  if (n_proc >= 0)
++  {
++    pids[n_proc] = fork();
++    if (pids[n_proc] < 0)
++    {
++      perror("fork");
++    }
++    else if (pids[n_proc] == 0)
++    {
++      //libcrun_warning("child %d with pid %d", n_proc, pids[n_proc]);
++      if (!is_native){
++        command_container(n_proc, p, arguments);
++      } else {
++        command_native(n_proc, p);
++      }
++
++      exit(0);
++    }
++    else if (pids[n_proc] > 0)
++    {
++      fork_rec(pids, n_proc - 1, p, is_native, arguments);
++    }
++  }
++}
+\ No newline at end of file

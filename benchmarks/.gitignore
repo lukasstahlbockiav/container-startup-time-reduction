@@ -1,0 +1,7 @@
+bundles/*
+!bundles/.gitkeep
+!bundles/pod
+configs/*
+!configs/.gitkeep
+image/*
+!image/.gitkeep

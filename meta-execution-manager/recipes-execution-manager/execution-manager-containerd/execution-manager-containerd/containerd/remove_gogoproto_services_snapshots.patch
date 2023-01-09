@@ -1,0 +1,84 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**
+**  SPDX-License-Identifier: Apache-2.0
+**  source repository: https://github.com/containerd/containerd
+**/
+diff --git a/api/services/snapshots/v1/snapshots.proto b/api/services/snapshots/v1/snapshots.proto
+index 981d8a6ba..a5fac4248 100644
+--- a/api/services/snapshots/v1/snapshots.proto
++++ b/api/services/snapshots/v1/snapshots.proto
+@@ -2,7 +2,6 @@ syntax = "proto3";
+ 
+ package containerd.services.snapshots.v1;
+ 
+-import weak "gogoproto/gogo.proto";
+ import "google/protobuf/empty.proto";
+ import "google/protobuf/field_mask.proto";
+ import "google/protobuf/timestamp.proto";
+@@ -85,13 +84,11 @@ message StatSnapshotRequest {
+ }
+ 
+ enum Kind {
+-	option (gogoproto.goproto_enum_prefix) = false;
+-	option (gogoproto.enum_customname) = "Kind";
+-
+-	UNKNOWN = 0 [(gogoproto.enumvalue_customname) = "KindUnknown"];
+-	VIEW = 1 [(gogoproto.enumvalue_customname) = "KindView"];
+-	ACTIVE = 2 [(gogoproto.enumvalue_customname) = "KindActive"];
+-	COMMITTED = 3 [(gogoproto.enumvalue_customname) = "KindCommitted"];
++	
++	UNKNOWN = 0;
++	VIEW = 1;
++	ACTIVE = 2;
++	COMMITTED = 3;
+ }
+ 
+ message Info {
+@@ -100,10 +97,10 @@ message Info {
+ 	Kind kind = 3;
+ 
+ 	// CreatedAt provides the time at which the snapshot was created.
+-	google.protobuf.Timestamp created_at = 4 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp created_at = 4;
+ 
+ 	// UpdatedAt provides the time the info was last updated.
+-	google.protobuf.Timestamp updated_at = 5 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp updated_at = 5;
+ 
+ 	// Labels are arbitrary data on snapshots.
+ 	//
+@@ -112,12 +109,12 @@ message Info {
+ }
+ 
+ message StatSnapshotResponse {
+-	Info info = 1 [(gogoproto.nullable) = false];
++	Info info = 1;
+ }
+ 
+ message UpdateSnapshotRequest {
+ 	string snapshotter = 1;
+-	Info info = 2 [(gogoproto.nullable) = false];
++	Info info = 2;
+ 
+ 	// UpdateMask specifies which fields to perform the update on. If empty,
+ 	// the operation applies to all fields.
+@@ -129,7 +126,7 @@ message UpdateSnapshotRequest {
+ }
+ 
+ message UpdateSnapshotResponse {
+-	Info info = 1 [(gogoproto.nullable) = false];
++	Info info = 1;
+ }
+ 
+ message ListSnapshotsRequest{
+@@ -149,7 +146,7 @@ message ListSnapshotsRequest{
+ }
+ 
+ message ListSnapshotsResponse {
+-	repeated Info info = 1 [(gogoproto.nullable) = false];
++	repeated Info info = 1;
+ }
+ 
+ message UsageRequest {

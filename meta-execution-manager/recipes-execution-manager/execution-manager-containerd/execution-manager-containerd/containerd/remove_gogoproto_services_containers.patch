@@ -1,0 +1,87 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**
+**  SPDX-License-Identifier: Apache-2.0
+**  source repository: https://github.com/containerd/containerd
+**/
+diff --git a/api/services/containers/v1/containers.proto b/api/services/containers/v1/containers.proto
+index d491f46cf..4899d3968 100644
+--- a/api/services/containers/v1/containers.proto
++++ b/api/services/containers/v1/containers.proto
+@@ -2,7 +2,6 @@ syntax = "proto3";
+ 
+ package containerd.services.containers.v1;
+ 
+-import weak "gogoproto/gogo.proto";
+ import "google/protobuf/any.proto";
+ import "google/protobuf/empty.proto";
+ import "google/protobuf/field_mask.proto";
+@@ -83,10 +82,10 @@ message Container {
+ 	string snapshot_key = 7;
+ 
+ 	// CreatedAt is the time the container was first created.
+-	google.protobuf.Timestamp created_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp created_at = 8;
+ 
+ 	// UpdatedAt is the last time the container was mutated.
+-	google.protobuf.Timestamp updated_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp updated_at = 9;
+ 
+ 	// Extensions allow clients to provide zero or more blobs that are directly
+ 	// associated with the container. One may provide protobuf, json, or other
+@@ -97,7 +96,7 @@ message Container {
+ 	// that should be unique against other extensions. When updating extension
+ 	// data, one should only update the specified extension using field paths
+ 	// to select a specific map key.
+-	map<string, google.protobuf.Any> extensions = 10 [(gogoproto.nullable) = false];
++	map<string, google.protobuf.Any> extensions = 10;
+ }
+ 
+ message GetContainerRequest {
+@@ -105,7 +104,7 @@ message GetContainerRequest {
+ }
+ 
+ message GetContainerResponse {
+-	Container container = 1 [(gogoproto.nullable) = false];
++	Container container = 1;
+ }
+ 
+ message ListContainersRequest {
+@@ -123,15 +122,15 @@ message ListContainersRequest {
+ }
+ 
+ message ListContainersResponse {
+-	repeated Container containers = 1 [(gogoproto.nullable) = false];
++	repeated Container containers = 1;
+ }
+ 
+ message CreateContainerRequest {
+-	Container container = 1 [(gogoproto.nullable) = false];
++	Container container = 1;
+ }
+ 
+ message CreateContainerResponse {
+-	Container container = 1 [(gogoproto.nullable) = false];
++	Container container = 1;
+ }
+ 
+ // UpdateContainerRequest updates the metadata on one or more container.
+@@ -143,7 +142,7 @@ message UpdateContainerRequest {
+ 	// Container provides the target values, as declared by the mask, for the update.
+ 	//
+ 	// The ID field must be set.
+-	Container container = 1 [(gogoproto.nullable) = false];
++	Container container = 1;
+ 
+ 	// UpdateMask specifies which fields to perform the update on. If empty,
+ 	// the operation applies to all fields.
+@@ -151,7 +150,7 @@ message UpdateContainerRequest {
+ }
+ 
+ message UpdateContainerResponse {
+-	Container container = 1 [(gogoproto.nullable) = false];
++	Container container = 1;
+ }
+ 
+ message DeleteContainerRequest {

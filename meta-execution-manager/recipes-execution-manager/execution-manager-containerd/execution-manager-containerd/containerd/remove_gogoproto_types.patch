@@ -1,0 +1,122 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**
+**  SPDX-License-Identifier: Apache-2.0
+**  source repository: https://github.com/containerd/containerd
+**/
+diff --git a/api/types/descriptor.proto b/api/types/descriptor.proto
+index 6d90a1626..54887b9a2 100644
+--- a/api/types/descriptor.proto
++++ b/api/types/descriptor.proto
+@@ -2,8 +2,6 @@ syntax = "proto3";
+ 
+ package containerd.types;
+ 
+-import weak "gogoproto/gogo.proto";
+-
+ option go_package = "github.com/containerd/containerd/api/types;types";
+ 
+ // Descriptor describes a blob in a content store.
+@@ -13,7 +11,7 @@ option go_package = "github.com/containerd/containerd/api/types;types";
+ // See https://godoc.org/github.com/opencontainers/image-spec/specs-go/v1#Descriptor
+ message Descriptor {
+ 	string media_type = 1;
+-	string digest = 2 [(gogoproto.customtype) = "github.com/opencontainers/go-digest.Digest", (gogoproto.nullable) = false];
++	string digest = 2;
+ 	int64 size = 3;
+ 	map<string, string> annotations = 5;
+ }
+diff --git a/api/types/metrics.proto b/api/types/metrics.proto
+index 0e631d2ac..48756cd0b 100644
+--- a/api/types/metrics.proto
++++ b/api/types/metrics.proto
+@@ -2,14 +2,13 @@ syntax = "proto3";
+ 
+ package containerd.types;
+ 
+-import weak "gogoproto/gogo.proto";
+ import "google/protobuf/any.proto";
+ import "google/protobuf/timestamp.proto";
+ 
+ option go_package = "github.com/containerd/containerd/api/types;types";
+ 
+ message Metric {
+-	google.protobuf.Timestamp timestamp = 1 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp timestamp = 1;
+ 	string id = 2;
+ 	google.protobuf.Any data = 3;
+ }
+diff --git a/api/types/mount.proto b/api/types/mount.proto
+index cd80e44a2..ee011db3a 100644
+--- a/api/types/mount.proto
++++ b/api/types/mount.proto
+@@ -2,8 +2,6 @@ syntax = "proto3";
+ 
+ package containerd.types;
+ 
+-import weak "gogoproto/gogo.proto";
+-
+ option go_package = "github.com/containerd/containerd/api/types;types";
+ 
+ // Mount describes mounts for a container.
+diff --git a/api/types/platform.proto b/api/types/platform.proto
+index 4cf9834bd..99a7e72a1 100644
+--- a/api/types/platform.proto
++++ b/api/types/platform.proto
+@@ -2,14 +2,12 @@ syntax = "proto3";
+ 
+ package containerd.types;
+ 
+-import weak "gogoproto/gogo.proto";
+-
+ option go_package = "github.com/containerd/containerd/api/types;types";
+ 
+ // Platform follows the structure of the OCI platform specification, from
+ // descriptors.
+ message Platform {
+-	string os = 1 [(gogoproto.customname) = "OS"];
++	string os = 1;
+ 	string architecture = 2;
+ 	string variant = 3;
+ }
+diff --git a/api/types/task/task.proto b/api/types/task/task.proto
+index da91cb033..986584790 100644
+--- a/api/types/task/task.proto
++++ b/api/types/task/task.proto
+@@ -2,20 +2,16 @@ syntax = "proto3";
+ 
+ package containerd.v1.types;
+ 
+-import weak "gogoproto/gogo.proto";
+ import "google/protobuf/timestamp.proto";
+ import "google/protobuf/any.proto";
+ 
+ enum Status {
+-	option (gogoproto.goproto_enum_prefix) = false;
+-	option (gogoproto.enum_customname) = "Status";
+-
+-	UNKNOWN = 0 [(gogoproto.enumvalue_customname) = "StatusUnknown"];
+-	CREATED = 1 [(gogoproto.enumvalue_customname) = "StatusCreated"];
+-	RUNNING = 2 [(gogoproto.enumvalue_customname) = "StatusRunning"];
+-	STOPPED = 3 [(gogoproto.enumvalue_customname) = "StatusStopped"];
+-	PAUSED = 4 [(gogoproto.enumvalue_customname) = "StatusPaused"];
+-	PAUSING = 5 [(gogoproto.enumvalue_customname) = "StatusPausing"];
++	UNKNOWN = 0;
++	CREATED = 1;
++	RUNNING = 2;
++	STOPPED = 3;
++	PAUSED = 4;
++	PAUSING = 5;
+ }
+ 
+ message Process {
+@@ -28,7 +24,7 @@ message Process {
+ 	string stderr = 7;
+ 	bool terminal = 8;
+ 	uint32 exit_status = 9;
+-	google.protobuf.Timestamp exited_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
++	google.protobuf.Timestamp exited_at = 10;
+ }
+ 
+ message ProcessInfo {

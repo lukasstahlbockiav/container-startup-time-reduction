@@ -1,0 +1,93 @@
+/**
+**  Created by Lukas Stahlbock in 2022
+**  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+**/
+diff --git a/src/batch.c b/src/batch.c
+new file mode 100644
+index 0000000..c124f37
+--- /dev/null
++++ b/src/batch.c
+@@ -0,0 +1,83 @@
++#include <argp.h>
++
++#include "batch.h"
++#include <sys/wait.h>
++#include "batch/configuration.h"
++#include "batch/batch_command.h"
++
++static struct crun_batch_global_arguments arguments;
++static char args_doc[] = "CONFIG_FILE_PATH";
++
++enum
++{
++    OPTION_DEBUG = 1000,
++    OPTION_LOG,
++    OPTION_LOG_FORMAT
++};
++
++static struct argp_option options[] = { { "native", 'n', 0, 0, "specify if config file targets native applications. Default: false (containers)", 0 },
++                                        { 0 } };
++
++static error_t parse_opt (int key, char *arg, struct argp_state *state) {
++    const char *tmp;
++
++    switch (key) {
++
++        case 'n':
++            arguments.native = true;
++            break;
++
++        case ARGP_KEY_ARG:
++            if (state->arg_num >= 1)
++                /* Too many arguments. */
++                argp_usage (state);
++
++            arguments.config = arg;
++
++            break;
++
++        case ARGP_KEY_END:
++            if (state->arg_num < 1)
++                /* Not enough arguments. */
++                argp_usage (state);
++            break;
++        default:
++            return ARGP_ERR_UNKNOWN;
++        }
++
++    return 0;
++}
++
++static struct argp argp = { options, parse_opt, args_doc, NULL, NULL, NULL, NULL };
++
++int crun_command_batch (struct crun_global_arguments *global_args, int argc, char **argv, libcrun_error_t *error)
++{
++    int first_arg, ret;
++    size_t num;
++    
++    arguments.native = false;
++
++    argp_parse (&argp, argc, argv, ARGP_IN_ORDER, &first_arg, &arguments);
++
++    libcrun_warning("Starting batch command");
++
++    struct config_options_s config_options;
++    struct config_containers_s* config_containers[MAX_APPLICATIONS];
++    struct config_containers_s* (*p_config_containers)[] = &config_containers;
++    pid_t pids[MAX_APPLICATIONS], wpid;
++    int status = 0;
++
++    for ( int i = 0; i < MAX_APPLICATIONS; i++){
++        config_containers[i] = malloc(sizeof(struct config_containers_s));
++    }
++
++    parse_execution_config(arguments.config, &config_options, p_config_containers, &num);
++    libcrun_warning("Parsed config and found %d containers", num);
++
++    fork_rec(pids, num - 1, p_config_containers, arguments.native, global_args);
++
++    if (!arguments.native) {
++        while ((wpid = wait(&status)) > 0);
++    };
++
++}

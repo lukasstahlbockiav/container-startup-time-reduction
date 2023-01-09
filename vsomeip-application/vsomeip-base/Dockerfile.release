@@ -1,0 +1,66 @@
+#
+#  Created by Lukas Stahlbock in 2022
+#  Copyright (c) 2022 IAV GmbH Ingenieurgesellschaft Auto und Verkehr. All rights reserved.
+#
+ARG IMAGE_BUILD
+FROM --platform=arm64 ${IMAGE_BUILD} AS BUILDSTAGE
+
+FROM arm64v8/ubuntu:20.04 as BASE_STAGE
+
+RUN DEBIAN_FRONTEND="noninteractive" apt update && \
+    DEBIAN_FRONTEND="noninteractive" apt install -y libboost-all-dev libstdc++6 wget
+COPY --from=BUILDSTAGE /usr/local/ /usr/local/
+RUN wget -P /usr/bin/ https://github.com/multiarch/qemu-user-static/releases/download/v7.1.0-2/qemu-aarch64-static 
+RUN ldd /usr/local/bin/routingmanagerd
+RUN mkdir /dev_dummy
+
+FROM arm64v8/ubuntu:20.04 AS ANOTHER_STAGE
+
+# Docker follows symlinks to target and copies the target
+# Therefore, we cannot only copy libs but must also manually create symlinks again
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/libpthread-2.31.so /tmp/lib/aarch64-linux-gnu/libpthread-2.31.so
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/libdl-2.31.so /tmp/lib/aarch64-linux-gnu/libdl-2.31.so
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/libgcc_s.so.1 /tmp/lib/aarch64-linux-gnu/libgcc_s.so.1
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/libc-2.31.so /tmp/lib/aarch64-linux-gnu/libc-2.31.so
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/libm-2.31.so /tmp/lib/aarch64-linux-gnu/libm-2.31.so
+RUN cd /tmp/lib/aarch64-linux-gnu && \
+    ln -s libpthread-2.31.so libpthread.so.0 && \
+    ln -s libdl-2.31.so libdl.so.2 && \
+    ln -s libc-2.31.so libc.so.6 && \
+    ln -s libm-2.31.so libm.so.6
+
+COPY --from=BASE_STAGE /lib/aarch64-linux-gnu/ld-2.31.so /tmp/lib/aarch64-linux-gnu/ld-2.31.so
+RUN cd /tmp/lib/ && ln -s aarch64-linux-gnu/ld-2.31.so ld-linux-aarch64.so.1
+
+COPY --from=BASE_STAGE /usr/lib/aarch64-linux-gnu/libboost_system.so.1.71.0 /tmp/usr/lib/aarch64-linux-gnu/libboost_system.so.1.71.0
+COPY --from=BASE_STAGE /usr/lib/aarch64-linux-gnu/libboost_thread.so.1.71.0 /tmp/usr/lib/aarch64-linux-gnu/libboost_thread.so.1.71.0
+COPY --from=BASE_STAGE /usr/lib/aarch64-linux-gnu/libboost_log.so.1.71.0 /tmp/usr/lib/aarch64-linux-gnu/libboost_log.so.1.71.0
+COPY --from=BASE_STAGE /usr/lib/aarch64-linux-gnu/libboost_filesystem.so.1.71.0 /tmp/usr/lib/aarch64-linux-gnu/libboost_filesystem.so.1.71.0
+COPY --from=BASE_STAGE /usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.28 /tmp/usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.28
+RUN cd /tmp/usr/lib/aarch64-linux-gnu && \
+    ln -s libboost_system.so.1.71.0 libboost_system.so && \
+    ln -s libboost_thread.so.1.71.0 libboost_thread.so && \
+    ln -s libboost_log.so.1.71.0 libboost_log.so && \
+    ln -s libboost_filesystem.so.1.71.0 libboost_filesystem.so && \
+    ln -s libstdc++.so.6.0.28 libstdc++.so.6
+
+FROM --platform=linux/arm64/v8 scratch as SCRATCH_INTERMEDIATE
+#COPY --from=ANOTHER_STAGE /usr/lib/helper/ /usr/lib/
+#COPY --from=BASE_STAGE /usr/lib/libgcc_s.so.1 /usr/lib/
+#COPY --from=BASE_STAGE /lib/ld-musl-aarch64.so.1 /lib/
+#COPY --from=BASE_STAGE /lib/libc.musl-aarch64.so.1 /lib/
+#COPY --from=BASE_STAGE /usr/lib/libboost_log* /usr/lib/
+#COPY --from=BASE_STAGE /usr/lib/libboost_system* /usr/lib/
+#COPY --from=BASE_STAGE /usr/lib/libboost_thread* /usr/lib/
+#COPY --from=BASE_STAGE /usr/lib/libboost_filesystem* /usr/lib/
+COPY --from=BASE_STAGE /usr/local/lib /usr/local/lib
+COPY --from=BASE_STAGE /usr/local/bin /usr/local/bin
+
+FROM --platform=linux/arm64/v8 scratch as SCRATCH_INTERMEDIATE_02
+COPY --from=ANOTHER_STAGE /tmp/lib/ /lib/
+COPY --from=ANOTHER_STAGE /tmp/usr/lib/ /usr/lib/
+COPY --from=BASE_STAGE /dev_dummy /dev
+
+FROM --platform=linux/arm64/v8 scratch
+COPY --from=SCRATCH_INTERMEDIATE_02 / /
+COPY --from=SCRATCH_INTERMEDIATE /usr/local/ /usr/local/
